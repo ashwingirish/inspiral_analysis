@@ -1,3 +1,4 @@
+import os
 import sys, dill, pickle, dynesty
 import numpy as np
 from scipy.linalg import toeplitz
@@ -53,15 +54,36 @@ loglikelihood = LogLikelihood(event=event,
 
 prior_transform = PriorTransform(priors, event)
 
-# Run Dynesty sampler
-dsampler = dynesty.NestedSampler(loglikelihood,
-                                 prior_transform,
-                                 ndim=8,
-                                 sample='unif',
-                                 nlive=100)
-dsampler.run_nested(checkpoint_file='area_law.save',
-                    checkpoint_every=10,
-                    maxiter=200)
+# === Checkpoint handling ===
+checkpoint_path = "area_law.save" #This needs to be modified accordingly, make sure you check this
+sampler = None
+
+if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
+    try:
+        with open(checkpoint_path, "rb") as f:
+            sampler = NestedSampler.restore(checkpoint_path)
+        print("Resumed from checkpoint.")
+    except Exception as e:
+        print(f"Failed to load checkpoint, starting fresh: {e}")
+        sampler = None
+
+if sampler is None:
+    sampler = dynesty.NestedSampler(
+        loglikelihood,
+        prior_transform,
+        ndim=8,
+        sample='unif',
+        nlive=100
+    )
+    print("🚀 Starting fresh Dynesty run.")
+
+# === Run or continue sampling ===
+sampler.run_nested(
+    checkpoint_file=checkpoint_path,
+    checkpoint_every=10,
+    resume=True
+)
+
 
 # Save results
 output_file = f'/Users/ashwingirish/Documents/Project_AreaLaw/inspiral_analysis/{event}_results1.pkl'
