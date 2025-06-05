@@ -30,30 +30,38 @@ detectors = event_details[event]
 det_class = gw_data[event]
 
 N = 2 * 4096
-cov_inverse = {d: np.linalg.inv(toeplitz(det_class[d]['acf'][0:N])) for d in detectors}
+cov_inverse = {
+    d: np.linalg.inv(toeplitz(det_class[d]['acf'][0:N]))
+    for d in detectors
+}
 
 ref_det = detectors[0]
 tgps = peak_time[event]
-time_delay = time_d(detectors, ref_det, fixed_parametrs[event]['ra'], fixed_parametrs[event]['dec'], tgps)
+time_delay = time_d(detectors, ref_det, fixed_parametrs[event]['ra'],
+                    fixed_parametrs[event]['dec'], tgps)
 
 # Construct likelihood and prior transform
-loglikelihood = LogLikelihood(
-    event=event,
-    det_class=det_class,
-    time_delay=time_delay,
-    cov_inverse=cov_inverse,
-    fixed_parametrs=fixed_parametrs,
-    priors=priors,
-    tgps=tgps,
-    N=N,
-    ref_det=ref_det
-)
+loglikelihood = LogLikelihood(event=event,
+                              det_class=det_class,
+                              time_delay=time_delay,
+                              cov_inverse=cov_inverse,
+                              fixed_parametrs=fixed_parametrs,
+                              priors=priors,
+                              tgps=tgps,
+                              N=N,
+                              ref_det=ref_det)
 
 prior_transform = PriorTransform(priors, event)
 
 # Run Dynesty sampler
-dsampler = dynesty.NestedSampler(loglikelihood, prior_transform, ndim=8, sample='unif', nlive=100)
-dsampler.run_nested(checkpoint_file='area_law.save', checkpoint_every=10, maxiter=200)
+dsampler = dynesty.NestedSampler(loglikelihood,
+                                 prior_transform,
+                                 ndim=8,
+                                 sample='unif',
+                                 nlive=100)
+dsampler.run_nested(checkpoint_file='area_law.save',
+                    checkpoint_every=10,
+                    maxiter=200)
 
 # Save results
 output_file = f'/Users/ashwingirish/Documents/Project_AreaLaw/inspiral_analysis/{event}_results1.pkl'

@@ -11,7 +11,9 @@ G = const.G.value
 M_SUN = const.M_sun.value
 c = const.c.value
 
-def time_domain_model(mass1, mass2, a_1, a_2, ld, theta_jn, phi_jl, tilt_1, tilt_2, phi_12, phase, approximant):
+
+def time_domain_model(mass1, mass2, a_1, a_2, ld, theta_jn, phi_jl, tilt_1,
+                      tilt_2, phi_12, phase, approximant):
     start_frequency = 20.0
     reference_frequency = 50.0
 
@@ -19,19 +21,34 @@ def time_domain_model(mass1, mass2, a_1, a_2, ld, theta_jn, phi_jl, tilt_1, tilt
     m_2 = mass2 * M_SUN
 
     iota, spin_1x, spin_1y, spin_1z, spin_2x, spin_2y, spin_2z = bilby.gw.conversion.bilby_to_lalsimulation_spins(
-        theta_jn=theta_jn, phi_jl=phi_jl, tilt_1=tilt_1, tilt_2=tilt_2,
-        phi_12=phi_12, a_1=a_1, a_2=a_2, mass_1=m_1, mass_2=m_2,
-        reference_frequency=reference_frequency, phase=phase)
+        theta_jn=theta_jn,
+        phi_jl=phi_jl,
+        tilt_1=tilt_1,
+        tilt_2=tilt_2,
+        phi_12=phi_12,
+        a_1=a_1,
+        a_2=a_2,
+        mass_1=m_1,
+        mass_2=m_2,
+        reference_frequency=reference_frequency,
+        phase=phase)
 
     delta_time = 1 / 4096.0
-    hplus, hcross = pycbc_wf.get_td_waveform(
-        approximant=approximant, mass1=mass1, mass2=mass2,
-        spin1x=spin_1x, spin1y=spin_1y, spin1z=spin_1z,
-        spin2x=spin_2x, spin2y=spin_2y, spin2z=spin_2z,
-        distance=ld, inclination=iota, coa_phase=phase,
-        delta_t=delta_time, f_lower=start_frequency,
-        f_ref=reference_frequency
-    )
+    hplus, hcross = pycbc_wf.get_td_waveform(approximant=approximant,
+                                             mass1=mass1,
+                                             mass2=mass2,
+                                             spin1x=spin_1x,
+                                             spin1y=spin_1y,
+                                             spin1z=spin_1z,
+                                             spin2x=spin_2x,
+                                             spin2y=spin_2y,
+                                             spin2z=spin_2z,
+                                             distance=ld,
+                                             inclination=iota,
+                                             coa_phase=phase,
+                                             delta_t=delta_time,
+                                             f_lower=start_frequency,
+                                             f_ref=reference_frequency)
 
     hp, hc = hplus.data, hcross.data
     tindex = np.argmax(np.sqrt(hp**2 + hc**2))
@@ -44,24 +61,32 @@ def time_domain_model(mass1, mass2, a_1, a_2, ld, theta_jn, phi_jl, tilt_1, tilt
 
     return hp, hc
 
+
 def time_d(det_list, ref_det, ra, dec, tM_gps):
     td = {}
     ref_det_lal = lal.cached_detector_by_prefix[ref_det]
     for d in det_list:
         det = lal.cached_detector_by_prefix[d]
-        td[ref_det + '_' + d] = lal.ArrivalTimeDiff(det.location, ref_det_lal.location, ra, dec, tM_gps)
+        td[ref_det + '_' + d] = lal.ArrivalTimeDiff(det.location,
+                                                    ref_det_lal.location, ra,
+                                                    dec, tM_gps)
     return td
+
 
 def project(hp, hc, detector_name, ra, dec, psi, time):
     detector = Detector(detector_name)
     F_plus, F_cross = detector.antenna_pattern(ra, dec, psi, time)
     return F_plus * hp + F_cross * hc
 
+
 def inner_product(a, b, inverse_covariance):
     return np.dot(a, np.dot(inverse_covariance, b))
 
+
 class LogLikelihood:
-    def __init__(self, event, det_class, time_delay, cov_inverse, fixed_parametrs, priors, tgps, N, ref_det):
+
+    def __init__(self, event, det_class, time_delay, cov_inverse,
+                 fixed_parametrs, priors, tgps, N, ref_det):
         self.event = event
         self.det_class = det_class
         self.time_delay = time_delay
@@ -86,15 +111,18 @@ class LogLikelihood:
 
         for d in self.det_class.keys():
             dt = self.time_delay[f'{self.ref_det}_{d}']
-            time_array_raw = self.det_class[d]['time'] - (self.trigger_time + dt)
-            data = self.det_class[d]['time_series'][time_array_raw <= 0.0][-self.N:]
+            time_array_raw = self.det_class[d]['time'] - (self.trigger_time +
+                                                          dt)
+            data = self.det_class[d]['time_series'][time_array_raw <=
+                                                    0.0][-self.N:]
 
-            hp, hc = time_domain_model(
-                mass1, mass2, a_1, a_2, ld, theta_jn, self.phi_jl,
-                tilt_1, tilt_2, self.phi_12, self.phase, 'IMRPhenomXPHM'
-            )
+            hp, hc = time_domain_model(mass1, mass2, a_1, a_2, ld, theta_jn,
+                                       self.phi_jl, tilt_1, tilt_2,
+                                       self.phi_12, self.phase,
+                                       'IMRPhenomXPHM')
 
-            prediction = project(hp, hc, d, self.ra, self.dec, self.psi, self.tgps)
+            prediction = project(hp, hc, d, self.ra, self.dec, self.psi,
+                                 self.tgps)
 
             dd = inner_product(data, data, self.cov_inverse[d])
             dh = inner_product(data, prediction, self.cov_inverse[d])
@@ -103,7 +131,9 @@ class LogLikelihood:
 
         return logL
 
+
 class PriorTransform:
+
     def __init__(self, priors, event):
         self.priors = priors
         self.event = event
