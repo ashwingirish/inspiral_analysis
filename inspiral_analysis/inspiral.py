@@ -61,7 +61,7 @@ sampler = None
 if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
     try:
         with open(checkpoint_path, "rb") as f:
-            sampler = NestedSampler.restore(checkpoint_path)
+            sampler = dynesty.NestedSampler.restore(checkpoint_path)
         print("Resumed from checkpoint.")
     except Exception as e:
         print(f"Failed to load checkpoint, starting fresh: {e}")
@@ -81,7 +81,8 @@ if sampler is None:
 sampler.run_nested(
     checkpoint_file=checkpoint_path,
     checkpoint_every=10,
-    resume=True
+    resume=True,
+    maxiter = 100
 )
 
 
