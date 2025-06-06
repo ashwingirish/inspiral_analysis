@@ -89,6 +89,6 @@ sampler.run_nested(
 # Save results
 output_file = f'/Users/ashwingirish/Documents/Project_AreaLaw/inspiral_analysis/{event}_results1.pkl'
 with open(output_file, 'wb') as f:
-    dill.dump(dsampler.results, f)
+    dill.dump(sampler.results, f)
 
 print("Sampling complete.")
