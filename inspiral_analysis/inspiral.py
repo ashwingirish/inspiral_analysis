@@ -3,9 +3,10 @@ import sys, dill, pickle, dynesty
 import numpy as np
 from scipy.linalg import toeplitz
 from utils import LogLikelihood, PriorTransform, time_d
+import multiprocessing
 
 # Load all necessary data
-base_path = '/Users/ashwingirish/Documents/Project_AreaLaw/inspiral_analysis/data_files/'
+base_path = '/work/pi_gkhanna_uri_edu/Ashwin/inspiral_analysis/data_files/'
 
 with open(base_path + 'events_and_detectors.pkl', 'rb') as f:
     event_details = pickle.load(f)
@@ -55,7 +56,7 @@ loglikelihood = LogLikelihood(event=event,
 prior_transform = PriorTransform(priors, event)
 
 # === Checkpoint handling ===
-checkpoint_path = "area_law.save" #This needs to be modified accordingly, make sure you check this
+checkpoint_path = "GW150914_test.save" #This needs to be modified accordingly, make sure you check this
 sampler = None
 
 if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
@@ -68,26 +69,30 @@ if os.path.exists(checkpoint_path) and os.path.getsize(checkpoint_path) > 0:
         sampler = None
 
 if sampler is None:
+    n_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 1))  # fallback = 1
+    pool = multiprocessing.Pool(processes=n_cpus)
+    
     sampler = dynesty.NestedSampler(
         loglikelihood,
         prior_transform,
         ndim=8,
         sample='unif',
-        nlive=100
+        nlive=1000,
+        pool=pool,
+        queue_size=n_cpus  # Must match or be <= number of processes
     )
     print("🚀 Starting fresh Dynesty run.")
 
 # === Run or continue sampling ===
 sampler.run_nested(
     checkpoint_file=checkpoint_path,
-    checkpoint_every=10,
-    resume=True,
-    maxiter = 100
+    checkpoint_every=3600,
+    resume=True
 )
 
 
 # Save results
-output_file = f'/Users/ashwingirish/Documents/Project_AreaLaw/inspiral_analysis/{event}_results1.pkl'
+output_file = f'/work/pi_gkhanna_uri_edu/Ashwin/inspiral_analysis/inspiral_analysis/{event}_results1.pkl'
 with open(output_file, 'wb') as f:
     dill.dump(sampler.results, f)
 
